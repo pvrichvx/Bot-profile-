@@ -6,7 +6,7 @@ import os
 intents = discord.Intents.default()
 intents.message_content = True
 
-bot = commands.Bot(command_prefix='?', intents=intents)
+bot = commands.Bot(command_prefix='-', intents=intents)
 
 PROFILE_CHANNEL_ID = 1381277483554574457  
 PRIVATE_CHANNEL_ID = 1381568733365010605  
@@ -52,7 +52,6 @@ async def pf(ctx):
     await msg.delete()
 
     user_tag = ctx.author.mention
-
     profile_text = f"""╭ ─ ୨୧ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ╮
                      <a:whitewing1:1381270108630159460> 𝑷𝑹𝑶𝑭𝑰𝑳𝑬 <a:whitewing2:1381270024315994273> 
       เลขประจำตัว : {id_msg.content}
@@ -64,11 +63,11 @@ async def pf(ctx):
 
     profile_channel = bot.get_channel(PROFILE_CHANNEL_ID)
     await profile_channel.send(profile_text)
-    await profile_channel.send(profile_pic_msg.attachments[0].url)
 
-    confirm = await ctx.send("✅ สร้างโปรไฟล์เรียบร้อยค่ะ")
-    await asyncio.sleep(3)
-    await confirm.delete()
+    image_file = await profile_pic_msg.attachments[0].to_file()
+    await profile_channel.send(file=image_file)
+
+    confirm = await ctx.send(f"✅ สร้างโปรไฟล์เรียบร้อย {ctx.author.mention}")
 
 TOKEN = os.getenv("DISCORD_BOT_TOKEN")
 bot.run(TOKEN)
