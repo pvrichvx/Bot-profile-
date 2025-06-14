@@ -1,10 +1,12 @@
 import discord
 from discord.ext import commands
+import asyncio
+import os
 
 intents = discord.Intents.default()
 intents.message_content = True
 
-bot = commands.Bot(command_prefix='-', intents=intents)
+bot = commands.Bot(command_prefix='?', intents=intents)
 
 PROFILE_CHANNEL_ID = 1381277483554574457  
 PRIVATE_CHANNEL_ID = 1381568733365010605  
@@ -21,27 +23,33 @@ async def pf(ctx):
     def check(m):
         return m.author == ctx.author and m.channel == ctx.channel
 
-    await ctx.send("ขอเลขประจำตัวค่ะ")
+    msg = await ctx.send("ขอเลขประจำตัวค่ะ")
     id_msg = await bot.wait_for('message', check=check)
     await id_msg.delete()
+    await msg.delete()
 
-    await ctx.send("ชื่อเล่น")
+    msg = await ctx.send("ชื่อเล่น")
     name_msg = await bot.wait_for('message', check=check)
     await name_msg.delete()
+    await msg.delete()
 
-    await ctx.send("ชื่อในเกม")
+    msg = await ctx.send("ชื่อในเกม")
     ign_msg = await bot.wait_for('message', check=check)
     await ign_msg.delete()
+    await msg.delete()
 
-    await ctx.send("ชื่อเฟส")
+    msg = await ctx.send("ชื่อเฟส")
     fb_msg = await bot.wait_for('message', check=check)
     await fb_msg.delete()
+    await msg.delete()
 
-    await ctx.send("ขอโปรไฟล์เกมหน่อยค่ะ [ส่งเป็นรูปภาพ]")
+    msg = await ctx.send("ขอโปรไฟล์เกมหน่อยค่ะ [ส่งเป็นรูปภาพ]")
     profile_pic_msg = await bot.wait_for('message', check=check)
     if not profile_pic_msg.attachments:
+        await msg.delete()
         return await ctx.send("❌ โปรดแนบรูปโปรไฟล์เกมด้วยนะคะ")
     await profile_pic_msg.delete()
+    await msg.delete()
 
     user_tag = ctx.author.mention
 
@@ -58,8 +66,9 @@ async def pf(ctx):
     await profile_channel.send(profile_text)
     await profile_channel.send(profile_pic_msg.attachments[0].url)
 
-    await ctx.send("✅ สร้างโปรไฟล์เรียบร้อยค่ะ")
+    confirm = await ctx.send("✅ สร้างโปรไฟล์เรียบร้อยค่ะ")
+    await asyncio.sleep(3)
+    await confirm.delete()
 
-import os
 TOKEN = os.getenv("DISCORD_BOT_TOKEN")
 bot.run(TOKEN)
