@@ -11,7 +11,7 @@ bot = commands.Bot(command_prefix='-', intents=intents)
 PROFILE_CHANNEL_ID = 1381277483554574457  
 PRIVATE_CHANNEL_ID = 1381568733365010605  
 
-# 🛡️ กันการใช้คำสั่งซ้ำพร้อมกัน
+# 🛡️ ป้องกันการใช้งานพร้อมกันหลายคน
 in_progress = set()
 
 @bot.event
@@ -40,45 +40,54 @@ async def pf(ctx):
         ]
 
         answers = []
+        sent_msgs = []
 
         for i, question in enumerate(questions):
             msg = await ctx.send(question)
+            sent_msgs.append(msg)
             try:
                 reply = await bot.wait_for('message', check=check, timeout=60)
             except asyncio.TimeoutError:
                 await msg.edit(content="❌ หมดเวลาในการตอบ โปรดลองใหม่อีกครั้งค่ะ")
                 return
-            await msg.delete()
-            await reply.delete()
+            answers.append(reply)
 
-            if i == len(questions) - 1:
-                # ถ้าเป็นรูปภาพ
-                if not reply.attachments:
-                    return await ctx.send("❌ โปรดแนบรูปโปรไฟล์เกมด้วยนะคะ")
-                image_file = await reply.attachments[0].to_file()
-                answers.append(image_file)
-            else:
-                answers.append(reply.content)
+        # ตรวจสอบรูปภาพคำตอบสุดท้าย
+        if not answers[-1].attachments:
+            await ctx.send("❌ โปรดแนบรูปโปรไฟล์เกมด้วยนะคะ")
+            return
+        image_file = await answers[-1].attachments[0].to_file()
 
         # สร้างข้อความโปรไฟล์
         user_mention = ctx.author.mention
         profile_text = f"""╭ ─ ୨୧ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ╮
                      <a:whitewing1:1381270108630159460> 𝑷𝑹𝑶𝑭𝑰𝑳𝑬 <a:whitewing2:1381270024315994273> 
-      เลขประจำตัว : {answers[0]}
-      ชื่อเล่น : {answers[1]}
-      ชื่อในเกม : {answers[2]}
-      <a:1000009473:1381559143537840150>Facebook : {answers[3]}
+      เลขประจำตัว : {answers[0].content}
+      ชื่อเล่น : {answers[1].content}
+      ชื่อในเกม : {answers[2].content}
+      <a:1000009473:1381559143537840150>Facebook : {answers[3].content}
       <a:emoji_102:1381560618171109386> Discord : {user_mention}
 ╰ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ୨୧ ─ ╯"""
 
         profile_channel = bot.get_channel(PROFILE_CHANNEL_ID)
+        if profile_channel is None:
+            await ctx.send("❌ ไม่พบช่องโปรไฟล์ โปรดตรวจสอบ PROFILE_CHANNEL_ID ค่ะ")
+            return
+
         await profile_channel.send(profile_text)
-        await profile_channel.send(file=answers[-1])  
+        await profile_channel.send(file=image_file)
+
+        # 🔻 ลบข้อความที่ถาม & ตอบทั้งหมด (รวมรูป)
+        for msg in sent_msgs:
+            await msg.delete()
+        for reply in answers:
+            await reply.delete()
 
         await ctx.send(f"✅ สร้างโปรไฟล์สำเร็จ {user_mention}")
-    
+
     finally:
         in_progress.remove(ctx.author.id)
 
+# 🔐 ใช้ Token จากตัวแปรแวดล้อม หรือจะใส่ตรงนี้ก็ได้ (ถ้าทดสอบ)
 TOKEN = os.getenv("DISCORD_BOT_TOKEN")
 bot.run(TOKEN)
