@@ -11,63 +11,74 @@ bot = commands.Bot(command_prefix='-', intents=intents)
 PROFILE_CHANNEL_ID = 1381277483554574457  
 PRIVATE_CHANNEL_ID = 1381568733365010605  
 
+# 🛡️ กันการใช้คำสั่งซ้ำพร้อมกัน
+in_progress = set()
+
 @bot.event
 async def on_ready():
-    print(f'✅ Bot เข้าสู่ระบบแล้วในชื่อ: {bot.user}')
+    print(f'✅ Bot พร้อมใช้งานในชื่อ: {bot.user}')
 
 @bot.command()
 async def pf(ctx):
     if ctx.channel.id != PRIVATE_CHANNEL_ID:
-        return await ctx.send("❌ ใช้คำสั่งนี้ในห้องที่กำหนดเท่านั้นนะคะ")
+        return await ctx.send("❌ ใช้คำสั่งนี้ในห้องที่กำหนดเท่านั้นค่ะ")
 
-    def check(m):
-        return m.author == ctx.author and m.channel == ctx.channel
+    if ctx.author.id in in_progress:
+        return await ctx.send("⏳ มีผู้ใช้กำลังสร้างโปรไฟล์อยู่ รอสักครู่ก่อนนะคะ")
 
-    msg = await ctx.send("ขอเลขประจำตัวค่ะ")
-    id_msg = await bot.wait_for('message', check=check)
-    await id_msg.delete()
-    await msg.delete()
+    in_progress.add(ctx.author.id)
+    try:
+        def check(m):
+            return m.author == ctx.author and m.channel == ctx.channel
 
-    msg = await ctx.send("ชื่อเล่น")
-    name_msg = await bot.wait_for('message', check=check)
-    await name_msg.delete()
-    await msg.delete()
+        questions = [
+            "ขอเลขประจำตัวค่ะ",
+            "ชื่อเล่น",
+            "ชื่อในเกม",
+            "ชื่อเฟส",
+            "ขอโปรไฟล์เกมหน่อยค่ะ [ส่งเป็นรูปภาพ]"
+        ]
 
-    msg = await ctx.send("ชื่อในเกม")
-    ign_msg = await bot.wait_for('message', check=check)
-    await ign_msg.delete()
-    await msg.delete()
+        answers = []
 
-    msg = await ctx.send("ชื่อเฟส")
-    fb_msg = await bot.wait_for('message', check=check)
-    await fb_msg.delete()
-    await msg.delete()
+        for i, question in enumerate(questions):
+            msg = await ctx.send(question)
+            try:
+                reply = await bot.wait_for('message', check=check, timeout=60)
+            except asyncio.TimeoutError:
+                await msg.edit(content="❌ หมดเวลาในการตอบ โปรดลองใหม่อีกครั้งค่ะ")
+                return
+            await msg.delete()
+            await reply.delete()
 
-    msg = await ctx.send("ขอโปรไฟล์เกมหน่อยค่ะ [ส่งเป็นรูปภาพ]")
-    profile_pic_msg = await bot.wait_for('message', check=check)
-    if not profile_pic_msg.attachments:
-        await msg.delete()
-        return await ctx.send("❌ โปรดแนบรูปโปรไฟล์เกมด้วยนะคะ")
-    await profile_pic_msg.delete()
-    await msg.delete()
+            if i == len(questions) - 1:
+                # ถ้าเป็นรูปภาพ
+                if not reply.attachments:
+                    return await ctx.send("❌ โปรดแนบรูปโปรไฟล์เกมด้วยนะคะ")
+                image_file = await reply.attachments[0].to_file()
+                answers.append(image_file)
+            else:
+                answers.append(reply.content)
 
-    user_tag = ctx.author.mention
-    profile_text = f"""╭ ─ ୨୧ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ╮
+        # สร้างข้อความโปรไฟล์
+        user_mention = ctx.author.mention
+        profile_text = f"""╭ ─ ୨୧ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ╮
                      <a:whitewing1:1381270108630159460> 𝑷𝑹𝑶𝑭𝑰𝑳𝑬 <a:whitewing2:1381270024315994273> 
-      เลขประจำตัว : {id_msg.content}
-      ชื่อเล่น : {name_msg.content}
-      ชื่อในเกม : {ign_msg.content}
-      <a:1000009473:1381559143537840150>Facebook : {fb_msg.content}
-      <a:emoji_102:1381560618171109386> Discord : {user_tag}
+      เลขประจำตัว : {answers[0]}
+      ชื่อเล่น : {answers[1]}
+      ชื่อในเกม : {answers[2]}
+      <a:1000009473:1381559143537840150>Facebook : {answers[3]}
+      <a:emoji_102:1381560618171109386> Discord : {user_mention}
 ╰ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ୨୧ ─ ╯"""
 
-    profile_channel = bot.get_channel(PROFILE_CHANNEL_ID)
-    await profile_channel.send(profile_text)
+        profile_channel = bot.get_channel(PROFILE_CHANNEL_ID)
+        await profile_channel.send(profile_text)
+        await profile_channel.send(file=answers[-1])  
 
-    image_file = await profile_pic_msg.attachments[0].to_file()
-    await profile_channel.send(file=image_file)
-
-    confirm = await ctx.send(f"✅ สร้างโปรไฟล์เรียบร้อย {ctx.author.mention}")
+        await ctx.send(f"✅ สร้างโปรไฟล์สำเร็จ {user_mention}")
+    
+    finally:
+        in_progress.remove(ctx.author.id)
 
 TOKEN = os.getenv("DISCORD_BOT_TOKEN")
 bot.run(TOKEN)
