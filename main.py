@@ -7,9 +7,8 @@ intents.message_content = True
 
 bot = commands.Bot(command_prefix='-', intents=intents)
 
-# ตั้งค่า ID ต่าง ๆ
-PROFILE_CHANNEL_ID = 1381277483554574457  # ห้องโพสต์โปรไฟล์
-PRIVATE_CHANNEL_ID = 1381568733365010605  # ห้องทำโปรไฟล์
+PROFILE_CHANNEL_ID = 1381277483554574457  
+PRIVATE_CHANNEL_ID = 1381568733365010605  
 
 @bot.event
 async def on_ready():
@@ -59,5 +58,8 @@ async def pf(ctx):
 
     await ctx.send("✅ สร้างโปรไฟล์เรียบร้อยค่ะ")
 
-# ใช้ token จาก environment variable เพื่อความปลอดภัย
-bot.run(os.getenv("DISCORD_BOT_TOKEN"))
+import os
+
+TOKEN = os.getenv("DISCORD_BOT_TOKEN")
+
+bot.run(TOKEN)
